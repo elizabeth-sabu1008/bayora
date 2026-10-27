@@ -12,7 +12,7 @@ Copy `.env.example` to `.env.local` for local development or configure these var
 
 | Variable | Required | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `GEMINI_API_KEY` | **Yes** (for live AI) | — | Google Gemini API key for live inference and automated red/blue generation. |
+| `GEMINI_API_KEY` | **Yes** (for live AI) | AQ.Ab8RN6IfqJlzSNFgTlh03HJz1wno8fvuCliUFDO52DXQLC9XSQ | Google Gemini API key for live inference and automated red/blue generation. |
 | `GEMINI_MODEL` | No | `gemini-3.8-flash` | Primary Gemini model ID used for inference and red/blue generator agents. |
 | `GEMINI_FALLBACK_MODEL` | No | `gemini-3.5-flash-lite` | Secondary fallback model if primary model encounters 503/429 high demand. |
 | `PORT` | No | `3000` | Port for the Express server. |
