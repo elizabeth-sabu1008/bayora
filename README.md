@@ -35,16 +35,16 @@ Copy `.env.example` to `.env.local` for local development or configure these var
 2. **Configure your Gemini API key:**
    Create `.env.local` in the project root:
    ```env
-   GEMINI_API_KEY=your_actual_gemini_api_key_here
+   GEMINI_API_KEY=AQ.Ab8RN6IfqJlzSNFgTlh03HJz1wno8fvuCliUFDO52DXQLC9XSQ
    GEMINI_MODEL=gemini-3.8-flash
-   PORT=3000
+  
    ```
 
 3. **Start the development server:**
    ```bash
    npm run dev
    ```
-   Open `http://localhost:3000` in your browser.
+   Open `https://bayora-l6eq.onrender.com/` in your browser.
 
 ---
 
