@@ -1,0 +1,18 @@
+# Dockerfile for Sealed Blue Defense Runner
+# PRODUCTION: In production, build as a minimal Distroless microVM with gVisor runsc runtime.
+
+FROM python:3.12-alpine
+
+# Set non-root working environment
+WORKDIR /sandbox
+
+COPY zones/blue/defense_runner.py /sandbox/defense_runner.py
+
+# Switch to unprivileged non-root user
+USER nobody:nogroup
+
+# Read-only execution with zero network access
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+ENTRYPOINT ["python", "-u", "/sandbox/defense_runner.py", "/tmp/defense.sock"]

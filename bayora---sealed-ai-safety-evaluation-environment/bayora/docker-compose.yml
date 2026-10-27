@@ -1,0 +1,137 @@
+version: '3.8'
+
+# Bayora Sealed Testing Environment - Docker Compose Architecture
+# Four isolated networks: red-seg, blue-seg, model-seg, audit-seg.
+# Red and Blue containers share NO networks and cannot communicate directly.
+# The Gateway is the single multi-homed airlock attached to all four networks.
+
+services:
+  # --- The Central Airlock & Policy Gateway ---
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    container_name: bayora-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - GATEWAY_HOST=0.0.0.0
+      - GATEWAY_PORT=8000
+      - SQLITE_DB_PATH=/app/data/bayora.db
+      - POLICY_FILE_PATH=/app/gateway/policy.yaml
+      - ZONE_RED_URL=http://zone-red:8001
+      - ZONE_BLUE_URL=http://zone-blue:8002
+      - ZONE_MODEL_URL=http://zone-model:8003
+      - ZONE_EVIDENCE_URL=http://zone-evidence:8004
+      - WEIGHTS_PATH=/app/data/model_weights.bin
+      - CONSTANT_LATENCY_DEADLINE_SECONDS=0.5
+    volumes:
+      - bayora_data:/app/data
+      - defense_ipc:/tmp/ipc
+    networks:
+      - red-seg
+      - blue-seg
+      - model-seg
+      - audit-seg
+    depends_on:
+      - zone-red
+      - zone-blue
+      - zone-model
+      - zone-evidence
+      - zone-defense-runner
+
+  # --- Red Zone: Adversarial Attacker Environment ---
+  # Attached ONLY to red-seg. Encrypts payloads at rest with AES-GCM.
+  # PRODUCTION: In production, configure runtime: runsc (gVisor) or AWS Nitro Enclaves
+  # with TPM 2.0 hardware PCR sealing so the AES key never exists unsealed in host memory.
+  zone-red:
+    build:
+      context: .
+      dockerfile: zones/red/Dockerfile
+    container_name: bayora-zone-red
+    restart: unless-stopped
+    networks:
+      - red-seg
+
+  # --- Blue Zone: Defensive Guardrails Environment ---
+  # Attached ONLY to blue-seg. Prepares signed Ed25519 defense artifacts.
+  # PRODUCTION: In production, enforce developer signature verification against an HSM / PKI certificate authority.
+  zone-blue:
+    build:
+      context: .
+      dockerfile: zones/blue/Dockerfile
+    container_name: bayora-zone-blue
+    restart: unless-stopped
+    networks:
+      - blue-seg
+
+  # --- Sealed Blue Defense Runner ---
+  # Isolated execution container for Blue's uploaded defense artifact.
+  # Completely air-gapped: network_mode: none (no network interfaces except loopback).
+  # Read-only filesystem, non-root user (nobody), CPU & memory limits, no logging volumes.
+  # PRODUCTION: In production, swap runtime to gVisor runsc (runtime: runsc) with Landlock LSM and custom seccomp.
+  zone-defense-runner:
+    build:
+      context: .
+      dockerfile: zones/blue/Dockerfile.runner
+    container_name: bayora-defense-runner
+    restart: unless-stopped
+    network_mode: "none"
+    read_only: true
+    user: "65534:65534"
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    volumes:
+      - defense_ipc:/tmp/ipc
+
+  # --- Model Zone: Client LLM Under Test ---
+  # Attached ONLY to model-seg. Serves OpenAI-compatible /evaluate with prefix-cache salting.
+  # PRODUCTION: In production, configure NVIDIA Multi-Instance GPU (MIG) slices (e.g. A100 1g.10gb)
+  # inside an AMD SEV-SNP / Intel TDX confidential virtual machine with read-only encrypted weights volume.
+  zone-model:
+    build:
+      context: .
+      dockerfile: zones/model/Dockerfile
+    container_name: bayora-zone-model
+    restart: unless-stopped
+    volumes:
+      - bayora_weights:/app/weights:ro
+    networks:
+      - model-seg
+
+  # --- Evidence Zone: Immutable Audit & Proofs Vault ---
+  # Attached ONLY to audit-seg.
+  # PRODUCTION: In production, wire directly to append-only WORM optical storage or Sigstore / Rekor transparency logs.
+  zone-evidence:
+    build:
+      context: .
+      dockerfile: zones/evidence/Dockerfile
+    container_name: bayora-zone-evidence
+    restart: unless-stopped
+    networks:
+      - audit-seg
+
+networks:
+  # Isolated subnets: Docker bridge without cross-network routing
+  red-seg:
+    driver: bridge
+    internal: false
+  blue-seg:
+    driver: bridge
+    internal: false
+  model-seg:
+    driver: bridge
+    internal: false
+  audit-seg:
+    driver: bridge
+    internal: false
+
+volumes:
+  bayora_data:
+  bayora_weights:
+  defense_ipc:

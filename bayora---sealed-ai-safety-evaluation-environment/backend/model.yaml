@@ -1,0 +1,27 @@
+# Bayora: Bring-Your-Own-Model (BYOM) Configuration
+# Supports any OpenAI-compatible inference endpoint (Ollama, llama.cpp, vLLM, or local mock)
+
+# Default: Local CPU model or OpenAI-compatible local proxy
+base_url: "http://localhost:11434/v1"
+model: "tiny-llama-1b"
+api_key_env: "OPENAI_API_KEY"
+
+# Inference parameters (enforce fixed max_tokens to prevent token-length timing side channels)
+max_tokens: 128
+temperature: 0.0
+
+# Mock inference fallback (enabled when Ollama / external server is offline)
+use_mock_server: true
+mock_server_url: "http://zone-model:8003/v1"
+
+# Side-channel defense settings:
+# Random 32-byte salt generated per evaluation round and mixed into KV cache keys
+cache_salting: true
+# Fresh context on each query (no conversation session memory retention)
+fresh_context_per_query: true
+
+# Model weights attestation path (read-only file hashed pre/post evaluation)
+weights_path: "/weights/model_weights.bin"
+
+# PRODUCTION: In production, configure dedicated NVIDIA Multi-Instance GPU (MIG) slices
+# (e.g. A100-SXM4-40GB MIG 1g.10gb) with hardware memory encryption (AMD SEV-SNP / Intel TDX).

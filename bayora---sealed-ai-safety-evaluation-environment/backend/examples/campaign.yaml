@@ -1,0 +1,5 @@
+name: "Adversarial-Safety-Benchmark-v1"
+query_budget: 50
+deadline_seconds: 0.5
+defense_file: "examples/defense.py"
+attacks_file: "examples/attacks.yaml"

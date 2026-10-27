@@ -1,0 +1,174 @@
+version: '3.8'
+
+# Bayora Sealed Testing Environment - Multi-Zone Airlock Architecture
+# Four isolated network segments:
+#   - red-seg: Adversarial attacker zone (AES-GCM vault)
+#   - blue-seg: Defensive guardrails zone
+#   - model-seg: Target LLM under test
+#   - audit-seg: Append-only Ed25519 evidence vault
+#
+# Only the gateway is attached to all four networks.
+# The defense-runner has network_mode: none (no network interfaces except loopback).
+# Communication between gateway and defense-runner is conducted via a mounted Unix
+# domain socket (/tmp/ipc/defense.sock) and controlled stdin/stdout IPC.
+# PRODUCTION: In production, enforce gVisor runsc (runtime: runsc) with Landlock LSM.
+
+services:
+  # 1. Gateway: The only cross-zone path (REST + SSE for live transcript)
+  gateway:
+    build:
+      context: ./backend
+      dockerfile: gateway/Dockerfile
+    container_name: bayora-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - GATEWAY_HOST=0.0.0.0
+      - GATEWAY_PORT=8000
+      - SQLITE_DB_PATH=/app/data/bayora.db
+      - POLICY_FILE_PATH=/app/gateway/policy.yaml
+      - ZONE_RED_URL=http://zone-red:8001
+      - ZONE_BLUE_URL=http://zone-blue:8002
+      - ZONE_MODEL_URL=http://zone-model:8003
+      - ZONE_EVIDENCE_URL=http://zone-evidence:8004
+      - WEIGHTS_PATH=/app/data/model_weights.bin
+      - CONSTANT_LATENCY_DEADLINE_SECONDS=2.0
+      - RESPONSE_DEADLINE_MS=2000
+      - FIXED_MAX_TOKENS=128
+      - DEFENSE_IPC_SOCKET=/tmp/ipc/defense.sock
+    volumes:
+      - bayora_data:/app/data
+      - defense_ipc:/tmp/ipc
+    networks:
+      - red-seg
+      - blue-seg
+      - model-seg
+      - audit-seg
+    depends_on:
+      - zone-red
+      - zone-model
+      - zone-evidence
+      - zone-defense-runner
+
+  # 2. Red Vault: Encrypts attack sets with AES-256-GCM; key stays strictly in this service
+  zone-red:
+    build:
+      context: ./backend
+      dockerfile: zones/red/Dockerfile
+    container_name: bayora-zone-red
+    restart: unless-stopped
+    networks:
+      - red-seg
+
+  red-vault:
+    build:
+      context: ./backend
+      dockerfile: zones/red/Dockerfile
+    container_name: bayora-red-vault
+    restart: unless-stopped
+    networks:
+      - red-seg
+
+  # 3. Blue Zone: Defensive guardrails zone attached ONLY to blue-seg
+  zone-blue:
+    build:
+      context: ./backend
+      dockerfile: zones/blue/Dockerfile.runner
+    container_name: bayora-zone-blue
+    restart: unless-stopped
+    networks:
+      - blue-seg
+
+  # 4. Sealed Defense Runner: Network-isolated Blue defense execution container
+  zone-defense-runner:
+    build:
+      context: ./backend
+      dockerfile: zones/blue/Dockerfile.runner
+    container_name: bayora-defense-runner
+    restart: unless-stopped
+    network_mode: "none"
+    read_only: true
+    user: "65534:65534"
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    volumes:
+      - defense_ipc:/tmp/ipc
+
+  defense-runner:
+    build:
+      context: ./backend
+      dockerfile: zones/blue/Dockerfile.runner
+    container_name: bayora-defense-runner-legacy
+    restart: unless-stopped
+    network_mode: "none"
+    read_only: true
+    user: "65534:65534"
+    volumes:
+      - defense_ipc:/tmp/ipc
+
+  # 5. Model: Small CPU model behind an OpenAI-compatible API
+  zone-model:
+    build:
+      context: ./backend
+      dockerfile: zones/model/Dockerfile
+    container_name: bayora-model
+    restart: unless-stopped
+    volumes:
+      - bayora_weights:/app/weights:ro
+    networks:
+      - model-seg
+
+  model:
+    build:
+      context: ./backend
+      dockerfile: zones/model/Dockerfile
+    container_name: bayora-model-legacy
+    restart: unless-stopped
+    volumes:
+      - bayora_weights:/app/weights:ro
+    networks:
+      - model-seg
+
+  # 6. Evidence: Append-only audit chain with Ed25519 signing.
+  zone-evidence:
+    build:
+      context: ./backend
+      dockerfile: zones/evidence/Dockerfile
+    container_name: bayora-evidence
+    restart: unless-stopped
+    networks:
+      - audit-seg
+
+  evidence:
+    build:
+      context: ./backend
+      dockerfile: zones/evidence/Dockerfile
+    container_name: bayora-evidence-legacy
+    restart: unless-stopped
+    networks:
+      - audit-seg
+
+networks:
+  # Four strictly isolated bridge networks
+  red-seg:
+    driver: bridge
+    internal: false
+  blue-seg:
+    driver: bridge
+    internal: false
+  model-seg:
+    driver: bridge
+    internal: false
+  audit-seg:
+    driver: bridge
+    internal: false
+
+volumes:
+  bayora_data:
+  bayora_weights:
+  defense_ipc:

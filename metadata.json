@@ -1,0 +1,8 @@
+{
+  "name": "BAYORA ",
+  "description": "A sealed evaluation room where Red, Blue, and Client LLM run safety tests with zero leaks and tamper-evident cryptographic proof.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

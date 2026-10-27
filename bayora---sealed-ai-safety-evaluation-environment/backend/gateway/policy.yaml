@@ -1,0 +1,216 @@
+# Bayora Attribute-Based Access Control (ABAC) Policy
+# Default Decision: DENY unless explicitly allowed by an active rule.
+# Evaluated tuple: (role, action, resource, current_round_state)
+
+default_effect: "deny"
+
+rules:
+  # --- ADMIN RULES ---
+  - id: "admin-create-round"
+    role: "admin"
+    action: "create"
+    resource: "/rounds"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-start-round"
+    role: "admin"
+    action: "start"
+    resource: "/rounds/{id}/start"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-commit"
+    role: "admin"
+    action: "commit"
+    resource: "/rounds/{id}/commit/*"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-advance-lock"
+    role: "admin"
+    action: "lock"
+    resource: "/rounds/{id}/lock"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-advance-execute"
+    role: "admin"
+    action: "execute"
+    resource: "/rounds/{id}/execute"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-advance-seal"
+    role: "admin"
+    action: "seal"
+    resource: "/rounds/{id}/seal"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-advance-verify"
+    role: "admin"
+    action: "verify"
+    resource: "/rounds/{id}/verify"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-advance-reveal"
+    role: "admin"
+    action: "reveal"
+    resource: "/rounds/{id}/reveal"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-read-all"
+    role: "admin"
+    action: "read"
+    resource: "/rounds/*"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-read-events"
+    role: "admin"
+    action: "read"
+    resource: "/events"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "admin-attestation"
+    role: "admin"
+    action: "attest"
+    resource: "/rounds/{id}/attestation/verify"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  # --- RED TEAM RULES ---
+  - id: "red-commit"
+    role: "red"
+    action: "commit"
+    resource: "/rounds/{id}/commit/red"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "red-execute"
+    role: "red"
+    action: "execute"
+    resource: "/rounds/{id}/execute"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  # Red Shaped Oracle queries (Enforced across states by state machine -> 409)
+  - id: "red-oracle-query"
+    role: "red"
+    action: "query"
+    resource: "/rounds/{id}/oracle/query"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "red-reveal"
+    role: "red"
+    action: "reveal"
+    resource: "/rounds/{id}/reveal/red"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "red-read-round"
+    role: "red"
+    action: "read"
+    resource: "/rounds/{id}"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "red-read-own-commit"
+    role: "red"
+    action: "read"
+    resource: "/rounds/{id}/commit/red"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  # --- BLUE TEAM RULES ---
+  - id: "blue-commit"
+    role: "blue"
+    action: "commit"
+    resource: "/rounds/{id}/commit/blue"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  # Blue uploads signed, versioned defense artifact
+  - id: "blue-defense-upload"
+    role: "blue"
+    action: "upload"
+    resource: "/rounds/{id}/defense/upload"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "blue-reveal"
+    role: "blue"
+    action: "reveal"
+    resource: "/rounds/{id}/reveal/blue"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "blue-read-round"
+    role: "blue"
+    action: "read"
+    resource: "/rounds/{id}"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "blue-read-own-commit"
+    role: "blue"
+    action: "read"
+    resource: "/rounds/{id}/commit/blue"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  # --- AUDITOR RULES (Read-Only) ---
+  - id: "auditor-read-rounds"
+    role: "auditor"
+    action: "read"
+    resource: "/rounds/*"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "auditor-read-events"
+    role: "auditor"
+    action: "read"
+    resource: "/events"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  - id: "auditor-verify"
+    role: "auditor"
+    action: "verify"
+    resource: "/rounds/{id}/verify"
+    allowed_states: ["*"]
+    effect: "allow"
+
+  # --- DISCLOSURE GATE (Findings access allowed ONLY during REVEAL or later) ---
+  - id: "disclosure-findings-red"
+    role: "red"
+    action: "read"
+    resource: "/rounds/{id}/findings"
+    allowed_states: ["REVEAL", "VERIFY", "COMPLETED"]
+    effect: "allow"
+
+  - id: "disclosure-findings-blue"
+    role: "blue"
+    action: "read"
+    resource: "/rounds/{id}/findings"
+    allowed_states: ["REVEAL", "VERIFY", "COMPLETED"]
+    effect: "allow"
+
+  - id: "disclosure-findings-auditor"
+    role: "auditor"
+    action: "read"
+    resource: "/rounds/{id}/findings"
+    allowed_states: ["REVEAL", "VERIFY", "COMPLETED"]
+    effect: "allow"
+
+  - id: "disclosure-findings-admin"
+    role: "admin"
+    action: "read"
+    resource: "/rounds/{id}/findings"
+    allowed_states: ["REVEAL", "VERIFY", "COMPLETED"]
+    effect: "allow"

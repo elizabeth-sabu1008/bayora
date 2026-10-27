@@ -1,0 +1,6 @@
+{
+  "name": "Bayora - Sealed AI Safety Evaluation Environment",
+  "description": "Cryptographically verifiable, network-isolated testing harness for Red team attacks, Blue team defenses, and model evaluations with commit-reveal and ABAC policy enforcement.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
