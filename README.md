@@ -9,10 +9,11 @@
 Red team, blue team and the client LLM run side by side, each in its own sealed zone.
 They talk only through one shaped, audited gateway.
 
-[Live demo](https://bayora-l6eq.onrender.com/) 
+[Live demo](https://bayora-l6eq.onrender.com/) · [Quick start](#-quick-start) · [API](#-api-reference) · [Deploy](#-deployment)
 
 ![Node](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3-3776AB?logo=python&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-build-646CFF?logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white)
@@ -130,6 +131,7 @@ flowchart LR
 
 | Layer | Technology |
 |---|---|
+| Languages | TypeScript · Python |
 | Frontend | React 19 · Vite · Tailwind CSS |
 | Backend | Express · TypeScript (Node.js 18+) |
 | Inference | Google Gemini (primary and fallback models) · optional vLLM server |
@@ -138,7 +140,7 @@ flowchart LR
 
 ## 🚀 Quick start
 
-**Prerequisites:** Node.js 18 or later (tested on 20, 22 and 24) and a [Google Gemini API key](https://aistudio.google.com/app/apikey).
+**Prerequisites:** Node.js 18 or later (tested on 20, 22 and 24), Python 3 and a [Google Gemini API key](https://aistudio.google.com/app/apikey).
 
 ```bash
 # 1. Clone and install
